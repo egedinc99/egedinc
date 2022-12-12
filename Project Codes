@@ -1,0 +1,377 @@
+# Data Mining Assignment
+
+rm(list=ls(all=TRUE))
+
+#loading libraries
+library(caret)
+library(neuralnet)
+library(forecast)
+library(rpart)
+library(rpart.plot)
+library(randomForest)
+library(xgboost)
+library(Matrix)
+library(caret)
+library(gains)
+library(forecast)
+library(dplyr)
+library(tidyr)
+library(data.table)
+library(ggplot2)
+library(fastDummies)
+
+#loading data
+data.df <-read.csv("HomeworkData.xls")
+ 
+summary(data.df)
+
+#Removing not important variables
+
+data.df <- data.df %>%
+  select (price_EUR, registration_year:power_ps,odometer_km:fuel_type,unrepaired_damage)
+
+View(data.df)
+
+#Mode Imputation
+is.na(data.df)<-data.df=="Unknown"
+
+Mode <- function(x) {
+  ux <- na.omit(unique(x)) #excludes NA value
+  tab <- tabulate(match(x,ux)); ux[tab==max(tab)] #finds mode from a column with NA excluded
+}
+Mode(data.df$fuel_type)
+Mode(data.df$transmission)
+Mode(data.df$unrepaired_damage)
+
+#Now we are replacing NA's with modes
+data.df$fuel_type[is.na(data.df$fuel_type)]<-Mode(data.df$fuel_type)
+data.df$transmission[is.na(data.df$transmission)]<-Mode(data.df$transmission)
+data.df$unrepaired_damage[is.na(data.df$unrepaired_damage)]<-Mode(data.df$unrepaired_damage)
+
+
+#dummies
+str(data.df)
+
+Fuel_Type.df <- dummy_cols((data.df$fuel_type))
+Transmission.df <- dummy_cols((data.df$transmission))
+Unrepaired_damage.df <- dummy_cols((data.df$unrepaired_damage))
+
+Cars.df <- cbind(data.df,Fuel_Type.df, Transmission.df, Unrepaired_damage.df)
+View(Cars.df)
+Cars1.df <- Cars.df[-c(4,8,9,10,18,21)]
+Cars1.df
+View(Cars1.df)
+Cars1.df <- Cars.df[-c(4,8,9,10,18,21)]
+colnames(Cars1.df)
+
+drop <- c("transmission","fuel_type",".data",".data.1")
+Cars1.df = Cars1.df[,!(names(Cars1.df) %in% drop)]
+View(Cars1.df)
+colnames(Cars1.df)
+
+
+#output is what we expect so until here, everything is great!!!
+
+#partioning
+set.seed(123)
+train.index<-sample(row.names(Cars1.df),0.6*dim(Cars1.df)[1])
+valid.index<-setdiff(row.names(Cars1.df),train.index)
+train.df<-Cars1.df[train.index,]
+valid.df<-Cars1.df[valid.index,]
+
+dim(train.df)
+dim(valid.df)
+
+
+#normalise
+norm.values<-preProcess(train.df,method='range')
+train.norm.df<-predict(norm.values,train.df)
+valid.norm.df<-predict(norm.values, valid.df)
+# train.norm.df
+
+
+summary(train.norm.df)
+
+#I got an error in below codes
+
+
+#creating a model
+model <- neuralnet(price_EUR ~ registration_year 
+                   
+                   + odometer_km 
+                   
+                   + registration_month 
+                   
+                   + registration_year
+                   
+                   + .data_Diesel 
+                   
+                   + .data_Electric
+                   
+                   + .data_Hybrid
+                   
+                   + .data_LPG 
+                   
+                   + .data_Other 
+                   
+                   + .data_Petrol
+                   
+                   + .data_Manual
+                   
+                   + .data_Yes,
+                
+                    data = train.norm.df, linear.output = T,hidden = 2)
+
+plot(model)
+
+
+#predictions
+
+training.prediction<-neuralnet::compute(model,train.norm.df)
+validation.prediction<-neuralnet::compute(model,valid.norm.df)
+
+
+#performance
+
+RMSE(training.prediction$net.result,train.norm.df$price_EUR)
+RMSE(validation.prediction$net.result,valid.norm.df$price_EUR)
+
+model <- neuralnet(price_EUR ~ registration_year 
+                   
+                   + odometer_km 
+                   
+                   + registration_month 
+                   
+                   + registration_year
+                   
+                   + .data_Diesel 
+                   
+                   + .data_Electric
+                   
+                   + .data_Hybrid
+                   
+                   + .data_LPG 
+                   
+                   + .data_Other 
+                   
+                   + .data_Petrol
+                   
+                   + .data_Manual
+                   
+                   + .data_Yes,
+                   
+                   data = train.norm.df, linear.output = T,hidden = 2)
+
+plot(model)
+
+
+#predictions
+training.prediction<-neuralnet::compute(model,train.norm.df)
+validation.prediction<-neuralnet::compute(model,valid.norm.df)
+
+
+#performance
+RMSE(training.prediction$net.result,train.norm.df$price_EUR)
+RMSE(validation.prediction$net.result,valid.norm.df$price_EUR)
+
+# 5 hidden nodes model
+
+model <- neuralnet(price_EUR ~ registration_year 
+                   
+                   + odometer_km 
+                   
+                   + registration_month 
+                   
+                   + registration_year
+                   
+                   + .data_Diesel 
+                   
+                   + .data_Electric
+                   
+                   + .data_Hybrid
+                   
+                   + .data_LPG 
+                   
+                   + .data_Other 
+                   
+                   + .data_Petrol
+                   
+                   + .data_Manual
+                   
+                   + .data_Yes,
+                   
+                   data = train.norm.df, linear.output = T,hidden = 5)
+
+plot(model)
+
+
+#predictions
+
+training.prediction<-neuralnet::compute(model,train.norm.df)
+validation.prediction<-neuralnet::compute(model,valid.norm.df)
+
+
+#performance
+
+RMSE(training.prediction$net.result,train.norm.df$price_EUR)
+
+RMSE(validation.prediction$net.result,valid.norm.df$price_EUR)
+
+
+# 5 hidden nodes model
+
+model <- neuralnet(price_EUR ~ registration_year 
+                   
+                   + odometer_km 
+                   
+                   + registration_month 
+                   
+                   + registration_year
+                   
+                   + .data_Diesel 
+                   
+                   + .data_Electric
+                   
+                   + .data_Hybrid
+                   
+                   + .data_LPG 
+                   
+                   + .data_Other 
+                   
+                   + .data_Petrol
+                   
+                   + .data_Manual
+                   
+                   + .data_Yes
+                   ,
+                   
+                   data = train.norm.df, linear.output = T,hidden = c(5,5,2))
+
+plot(model)
+
+
+#predictions
+training.prediction<-neuralnet::compute(model,train.norm.df)
+validation.prediction<-neuralnet::compute(model,valid.norm.df)
+
+
+#performance
+RMSE(training.prediction$net.result,train.norm.df$price_EUR)
+RMSE(validation.prediction$net.result,valid.norm.df$price_EUR)
+
+
+#==========================================================================================================================#
+
+
+# Linear regression
+
+LM_model <- lm(price_EUR ~ registration_year 
+                   
+                   + odometer_km 
+                   
+                   + registration_month 
+                   
+                   + registration_year
+                   
+                   + .data_Diesel 
+                   
+                   + .data_Electric
+                   
+                   + .data_Hybrid
+                   
+                   + .data_LPG 
+                   
+                   + .data_Other 
+                   
+                   + .data_Petrol
+                   
+                   + .data_Manual
+                   
+                   + .data_Yes,
+                   
+                   data = train.norm.df)
+
+summary(LM_model)
+
+training.prediction <- LM_model %>% predict(train.norm.df)
+
+validation.prediction <- LM_model %>% predict(valid.norm.df)
+
+RMSE(training.prediction, train.norm.df$price_EUR)
+
+RMSE(validation.prediction, valid.norm.df$price_EUR)
+
+importance <- varImp(LM_model, scale=FALSE)
+print(importance)
+
+#===============================================================================================================================
+
+# Decision tree regressor
+library(rpart)
+
+DTR_model <- rpart(price_EUR ~ registration_year 
+               
+               + odometer_km 
+               
+               + registration_month 
+               
+               + registration_year
+               
+               + .data_Diesel 
+               
+               + .data_Electric
+               
+               + .data_Hybrid
+               
+               + .data_LPG 
+               
+               + .data_Other 
+               
+               + .data_Petrol
+               
+               + .data_Manual
+               
+               + .data_Yes,
+               
+               data = train.norm.df)
+
+training.prediction <- DTR_model %>% predict(train.norm.df)
+training.prediction
+
+validation.prediction <- DTR_model %>% predict(valid.norm.df)
+
+RMSE(training.prediction, train.norm.df$price_EUR)
+
+RMSE(validation.prediction, valid.norm.df$price_EUR)
+
+DTR_importance <- varImp(DTR_model, scale=FALSE)
+print(DTR_importance)
+
+#======================================================================================================================
+
+# Shapely and xg boost
+
+install.packages("modelStudio")
+install.packages("DALEX")
+install.packages("tidyverse")
+install.packages("tidymodels")
+
+
+library(modelStudio)
+library(DALEX)
+library(tidyverse)
+library(tidymodels)
+
+colnames(train.norm.df)
+
+fit_xgboost <- boost_tree(learn_rate = 0.3) %>% set_mode("regression") %>% set_mode("regression") %>% fit(price_EUR~.,data = train.norm.df) 
+
+training.prediction <- fit_xgboost %>% predict(train.norm.df)
+
+caret::RMSE(training.prediction, train.norm.df$price_EUR)
+
+# explainer
+
+Explainer = DALEX:: explain(model = fit_xgboost,data = train.norm.df,y = train.norm.df$price_EUR,label = "XGBoost" )
+
+modelStudio::modelStudio(Explainer)
